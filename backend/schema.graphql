@@ -1,0 +1,84 @@
+interface Node {
+  id: ID!
+}
+
+type Balance {
+  amount: Float
+}
+
+input TransactionListFilter {
+  pageSize: Int
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+enum TransactionType {
+  CREDIT
+  DEBIT
+}
+
+type Transaction implements Node {
+  id: ID!
+  amount: Float!
+  asset: String!
+  destination: String!
+  source: String!
+  type: TransactionType!
+  timestamp: String!
+}
+
+type TransactionEdge {
+  cursor: String!
+  node: Transaction
+}
+
+type TransactionConnection {
+  edges: [TransactionEdge]
+  pageInfo: PageInfo!
+}
+
+type User implements Node {
+  id: ID!
+  name: String
+  balance: Balance
+  transactions(after: String, first: Int): TransactionConnection
+}
+
+type Query {
+  node(id: ID!): Node
+  user: User
+  userAvailable(name: String!): Boolean
+  transaction(id: ID!): Transaction
+}
+
+input AuthInput {
+  name: String
+  password: String
+}
+
+type AuthResult {
+  id: ID!
+  token: String
+}
+
+input TransactionInput {
+  name: String!
+  amount: Float!
+  password: String!
+}
+
+type TransferResult {
+  id: ID
+}
+
+type Mutation {
+  logout: Boolean!
+  signup(input: AuthInput): User
+  signin(input: AuthInput): User
+  createTransaction(input: TransactionInput): Transaction
+}

@@ -1,0 +1,14 @@
+{
+	"name": "not-a-bank",
+	"version": "1.0.0",
+	"description": "definitely not a bank",
+	"main": "index.js",
+	"license": "MIT",
+	"author": "carlosqsilva",
+	"packageManager": "pnpm@9.9.0",
+	"scripts": {
+		"api": "pnpm --filter backend dev",
+		"web": "pnpm --filter frontend dev",
+		"relay": "pnpm --filter frontend relay"
+	}
+}

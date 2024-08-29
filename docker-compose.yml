@@ -1,0 +1,113 @@
+version: "3.8"
+
+volumes:
+  postgres:
+  mongodb:
+
+networks:
+  app_network:
+    external: true
+  
+
+services:
+  postgres:
+    image: "postgres:16.4-alpine"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ledger"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: "ledger"
+      POSTGRES_PASSWORD: "ledger"
+      POSTGRES_DB: "ledger"
+      PGDATA: /data/postgres
+    volumes:
+      - postgres:/data/postgres
+
+  ledger:
+    container_name: "ledger"
+    ports:
+      - "3068:3068"
+    healthcheck:
+      test: ["CMD", "wget", "http://127.0.0.1:3068/_info", "-O", "-", "-q"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NUMARY_STORAGE_DRIVER: "postgres"
+      NUMARY_STORAGE_POSTGRES_CONN_STRING: "postgresql://ledger:ledger@postgres/ledger?sslmode=disable"
+      NUMARY_SERVER_HTTP_BIND_ADDRESS: "0.0.0.0:3068"
+      NUMARY_DEBUG: "true"
+    build:
+      dockerfile_inline: |
+        FROM alpine:3.20 AS base
+        RUN apk update && apk add ca-certificates
+
+        FROM base AS builder
+        RUN wget https://github.com/formancehq/ledger/releases/download/v1.11.2/numary_Linux_arm64.tar.gz
+        RUN tar xvzf numary_Linux_arm64.tar.gz
+
+        FROM base AS app
+        COPY --from=builder /numary /usr/local/bin/ledger
+        RUN chmod +x /usr/local/bin/ledger
+        EXPOSE 3068
+        ENTRYPOINT ["ledger"]
+        CMD ["server", "start"]
+
+  mongo:
+    image: mongo
+    restart: always
+    ports:
+      - 27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - mongodb:/data/db
+    configs:
+      - source: mongo_init.js
+        target: /docker-entrypoint-initdb.d/mongo-init.js
+
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: example
+      ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017/
+      ME_CONFIG_BASICAUTH: false
+
+  # backend:
+  #   container_name: backend
+  #   build:
+  #     context: .
+  #     dockerfile: ./backend/Dockerfile
+  #   restart: always
+  #   networks:
+  #     - app_network
+
+  # frontend:
+  #   container_name: frontend
+  #   build:
+  #     context: .
+  #     dockerfile: ./frontend/Dockerfile
+  #   restart: always
+  #   networks:
+  #     - app_network
+
+configs:
+  mongo_init.js:
+    content: |
+      db.createUser({
+        user: "dev",
+        pwd: "admin",
+        roles: [{ role: "readWrite", db: "development"}]
+      });
