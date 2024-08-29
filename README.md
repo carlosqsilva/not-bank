@@ -34,6 +34,8 @@ pnpm install
 # start database and services
 docker compose up -d
 
+# cd ./backend && cp .example.env .env
+
 # start backend
 pnpm run api
 
