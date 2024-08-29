@@ -37,6 +37,8 @@ docker compose up -d
 # start backend
 pnpm run api
 
+# cd ./frontend && pnpm run relay
+
 # start frontend
 pnpm run web
 
